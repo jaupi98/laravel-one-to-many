@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\Type;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
@@ -18,11 +19,9 @@ class ProjectController extends Controller
      */
     public function index(Request $request)
     {
-        $message = $request->query->get('message');
-
         $projects = Project::all();
 
-        return view('admin.projects.index', compact('projects', 'message'));
+        return view('admin.projects.index', compact('projects'));
     }
 
     /**
@@ -33,9 +32,7 @@ class ProjectController extends Controller
      */
     public function show(Request $request, Project $project)
     {
-        $message = $request->query->get('message');
-
-        return view('admin.projects.show', compact('project', 'message'));
+        return view('admin.projects.show', compact('project'));
     }
 
     /**
@@ -45,7 +42,8 @@ class ProjectController extends Controller
      */
     public function create()
     {
-        return view('admin.projects.create');
+        $types = Type::all();
+        return view('admin.projects.create', compact('types'));
     }
 
     /**
@@ -58,12 +56,16 @@ class ProjectController extends Controller
     {
         $form_data = $request->all();
 
-        if($request->hasFile('cover_image')){
-            
-            $img_path = Storage::put('projects_images', $request->cover_image);
-            
-            $form_data['cover_image'] = $img_path;
-        }
+        // GESTIONE UPLOAD DEI FILE (COVER_IMAGE)
+
+            if($request->hasFile('cover_image')){
+                
+                $img_path = Storage::put('projects_images', $request->cover_image);
+                
+                $form_data['cover_image'] = $img_path;
+            }
+
+        //
 
         $project = new Project();
 
@@ -71,9 +73,7 @@ class ProjectController extends Controller
 
         $project->save();
 
-        $message = 'Creazione Progetto Completata';
-
-        return redirect()->route('admin.projects.show', compact('project', 'message'));
+        return redirect()->route('admin.projects.show', compact('project'))->with('message', "Progetto : '$project->title' Creato Correttamente");
     }
 
     /**
@@ -84,7 +84,9 @@ class ProjectController extends Controller
      */
     public function edit(Project $project)
     {
-        return view('admin.projects.edit', compact('project'));
+        $types = Type::all();
+
+        return view('admin.projects.edit', compact('project', 'types'));
     }
 
     /**
@@ -98,23 +100,25 @@ class ProjectController extends Controller
     {
         $form_data = $request->all();
 
-        if($request->hasFile('cover_image')){
+        // GESTIONE UPLOAD DEI FILE (COVER_IMAGE)
 
-            if($project->cover_image){
+            if($request->hasFile('cover_image')){
 
-                Storage::delete($project->cover_image);
+                if($project->cover_image){
+
+                    Storage::delete($project->cover_image);
+                }
+                
+                $img_path = Storage::put('projects_images', $request->cover_image);
+                
+                $form_data['cover_image'] = $img_path;
             }
-            
-            $img_path = Storage::put('projects_images', $request->cover_image);
-            
-            $form_data['cover_image'] = $img_path;
-        }
+
+        //
 
         $project->update($form_data);
 
-        $message = 'Modifica Progetto Completata';
-
-        return redirect()->route('admin.projects.show', compact('project', 'message'));
+        return redirect()->route('admin.projects.show', compact('project'))->with('message', "Progetto : '$project->title' Modificato Correttamente");
     }
 
     /**
@@ -125,16 +129,18 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project)
     {
-        if($project->cover_image){
+        // GESTIONE CANCELLAZIONE DEI FILE (COVER_IMAGE)
 
-            Storage::delete($project->cover_image);
-        }
+            if($project->cover_image){
+
+                Storage::delete($project->cover_image);
+            }
+
+        //
 
         $project->delete();
 
-        $message = 'Cancellazione Progetto Completata';
-
-        return redirect()->route('admin.projects.index', compact('message'));
+        return redirect()->route('admin.projects.index')->with('message', "Progetto : '$project->title' Cancellato Correttamente");
     }
 
     public function deleteCoverImage(Project $project)
